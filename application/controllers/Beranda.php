@@ -1,6 +1,7 @@
-<?php 
+<?php
 
-class Beranda extends CI_Controller {
+class Beranda extends CI_Controller
+{
 
 	public function __construct()
 	{
@@ -30,7 +31,29 @@ class Beranda extends CI_Controller {
 	{
 		return number_format((float)$v, (int)$d, '.', '');
 	}
-	
+
+	private function status_pergeseran($mm)
+	{
+		$mm = (float)$mm;
+		if ($mm < 50) return ['label' => 'Normal', 'class' => 'bg-success-lt text-dark'];
+		if ($mm < 100) return ['label' => 'Waspada', 'class' => 'bg-warning-lt text-dark'];
+		if ($mm < 200) return ['label' => 'Siaga', 'class' => 'bg-orange-lt text-dark'];
+		return ['label' => 'Awas', 'class' => 'bg-danger-lt text-white'];
+	}
+
+	private function status_kecepatan($mm_per_day)
+	{
+		$mmd = (float)$mm_per_day;
+		$level_d = 0;
+		if ($mmd > 120) $level_d = 3;
+		else if ($mmd > 80) $level_d = 2;
+		else if ($mmd > 40) $level_d = 1;
+		if ($level_d === 0) return ['label' => 'Normal', 'class' => 'bg-success-lt text-dark'];
+		if ($level_d === 1) return ['label' => 'Waspada', 'class' => 'bg-warning-lt text-dark'];
+		if ($level_d === 2) return ['label' => 'Siaga', 'class' => 'bg-orange-lt text-dark'];
+		return ['label' => 'Awas', 'class' => 'bg-danger-lt text-white'];
+	}
+
 	public function get_deformasi_json($id_log)
 	{
 		$log = $this->db->where('id_log', $id_log)->get('log_kontrol')->row();
@@ -144,10 +167,18 @@ class Beranda extends CI_Controller {
 					'waktu' => isset($cek_tembak->waktu) ? $cek_tembak->waktu : $datetime,
 					'temp_tembak' => [
 						'nama_prisma' => $nama_prisma,
-						'N0' => $N0, 'E0' => $E0, 'Z0' => $Z0,
-						'HA0' => $HA0, 'VA0' => $VA0, 'SD0' => $SD0,
-						'N1' => $N1, 'E1' => $E1, 'Z1' => $Z1,
-						'HA1' => $HA1, 'VA1' => $VA1, 'SD1' => $SD1,
+						'N0' => $N0,
+						'E0' => $E0,
+						'Z0' => $Z0,
+						'HA0' => $HA0,
+						'VA0' => $VA0,
+						'SD0' => $SD0,
+						'N1' => $N1,
+						'E1' => $E1,
+						'Z1' => $Z1,
+						'HA1' => $HA1,
+						'VA1' => $VA1,
+						'SD1' => $SD1,
 						'DN' => $this->fmt($DN, 6),
 						'DE' => $this->fmt($DE, 6),
 						'DZ' => $this->fmt($DZ, 6),
@@ -168,15 +199,23 @@ class Beranda extends CI_Controller {
 			->set_content_type('application/json')
 			->set_output(json_encode($out, JSON_UNESCAPED_UNICODE));
 	}
-	
-	
-	function view_3d () {
-		$log_data = $this->db->order_by('datetime','desc')->get('log_kontrol')->result_array();
+
+
+	function view_3d()
+	{
+		if (!$this->session->userdata('temp_kontrol')) {
+			$temp_kontrol = $this->db->order_by('datetime', 'desc')->limit(1)->get('log_kontrol')->row();
+			if ($temp_kontrol) {
+				$this->session->set_userdata('temp_kontrol', $temp_kontrol);
+			}
+		}
+		$log_data = $this->db->order_by('datetime', 'desc')->get('log_kontrol')->result_array();
 		$data['log_data'] = $log_data;
-		
-		$this->load->view('deformasi',$data);
+		$data['temp_kontrol'] = $this->session->userdata('temp_kontrol');
+		$data['konten'] = 'konten/back/deformasi';
+		$this->load->view('template_admin/site', $data);
 	}
-	
+
 	public function tes_deformasi()
 	{
 		$raw = $this->input->post('parameter');
@@ -218,16 +257,18 @@ class Beranda extends CI_Controller {
 			->set_output(json_encode($new_data));
 	}
 
-	
-	public function ubah_tanggal() {
-		$id_log = $this->input->get('id_log');
-		$data_log = $this->db->where('id_log',$id_log)->get('log_kontrol')->row();
 
-		$this->session->set_userdata('temp_kontrol',$data_log);
+	public function ubah_tanggal()
+	{
+		$id_log = $this->input->get('id_log');
+		$data_log = $this->db->where('id_log', $id_log)->get('log_kontrol')->row();
+
+		$this->session->set_userdata('temp_kontrol', $data_log);
 		redirect('beranda');
 	}
 
-	function rotateEN($E, $N, $degree) {
+	function rotateEN($E, $N, $degree)
+	{
 
 		// Pivot = BS_1 (koordinat sebenarnya, dalam Easting – Northing)
 		$pivotE = 525919.314; // <— isi dengan easting BS_1 yang benar (GNSS)
@@ -254,9 +295,10 @@ class Beranda extends CI_Controller {
 		return [$newE, $newN];
 	}
 
-	function rotateCoordinate($lat, $lng, $degree) {
+	function rotateCoordinate($lat, $lng, $degree)
+	{
 
-		$pivotLat = 3.630666916497659; 
+		$pivotLat = 3.630666916497659;
 		$pivotLng = 117.23339499051768;
 
 		$bs1MeasLat = 3.6311211814254656;
@@ -288,8 +330,9 @@ class Beranda extends CI_Controller {
 	}
 
 
-	function export_excel (){
-		include APPPATH.'third_party/PHPExcel/PHPExcel.php';
+	function export_excel()
+	{
+		include APPPATH . 'third_party/PHPExcel/PHPExcel.php';
 		$excel = new PHPExcel();
 		$title = $this->input->post('title');
 		$excel->getProperties()->setCreator('Beacon Engineering')
@@ -297,7 +340,7 @@ class Beranda extends CI_Controller {
 			->setDescription("Data Semua Parameter");
 		$parameter = json_decode(json_encode($this->session->userdata('temp_prisma')));
 		$sheet = $excel->setActiveSheetIndex(0);
-		$style= [
+		$style = [
 			'font' => [
 				'bold' => true, // Set text to bold
 			],
@@ -347,23 +390,23 @@ class Beranda extends CI_Controller {
 
 		$tgl = $this->session->userdata('temp_kontrol')->datetime;
 
-		foreach(range('A','S') as $columnID) {
-			$sheet->getStyle($columnID. '5')->applyFromArray($style);
-			$sheet->getStyle($columnID. '6')->applyFromArray($style);
-			$sheet->getStyle($columnID. '5')->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-			$sheet->getStyle($columnID. '6')->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-			$sheet->getStyle($columnID. '5')->getAlignment()->setVertical(PHPExcel_Style_Alignment::VERTICAL_CENTER);
-			$sheet->getStyle($columnID. '6')->getAlignment()->setVertical(PHPExcel_Style_Alignment::VERTICAL_CENTER);
-			$sheet->getStyle($columnID.'1')->applyFromArray([
+		foreach (range('A', 'S') as $columnID) {
+			$sheet->getStyle($columnID . '5')->applyFromArray($style);
+			$sheet->getStyle($columnID . '6')->applyFromArray($style);
+			$sheet->getStyle($columnID . '5')->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+			$sheet->getStyle($columnID . '6')->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+			$sheet->getStyle($columnID . '5')->getAlignment()->setVertical(PHPExcel_Style_Alignment::VERTICAL_CENTER);
+			$sheet->getStyle($columnID . '6')->getAlignment()->setVertical(PHPExcel_Style_Alignment::VERTICAL_CENTER);
+			$sheet->getStyle($columnID . '1')->applyFromArray([
 				'font' => [
 					'bold' => true, // Set text to bold
-					'size' => 14, 
+					'size' => 14,
 				],
 			]);
-			$sheet->getStyle($columnID.'2')->applyFromArray([
+			$sheet->getStyle($columnID . '2')->applyFromArray([
 				'font' => [
 					'bold' => false, // Set text to bold
-					'size' => 12, 
+					'size' => 12,
 				],
 			]);
 		}
@@ -373,7 +416,7 @@ class Beranda extends CI_Controller {
 		$sheet->getStyle('A1')->getAlignment()->setVertical(PHPExcel_Style_Alignment::VERTICAL_CENTER);
 		$sheet->getStyle('A2')->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
 		$sheet->getStyle('A1')->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-		$style2= [
+		$style2 = [
 			'font' => [
 				'bold' => false, // Set text to bold
 			],
@@ -388,57 +431,57 @@ class Beranda extends CI_Controller {
 		$sheet->getColumnDimension('B')->setWidth(15);
 		$sheet->getColumnDimension('S')->setWidth(15);
 		$row = '7';
-		$judul2 = $this->session->userdata('temp_kontrol')->site == 'ccp'? 'CPP 3':'View Point';
-		$excel->setActiveSheetIndex(0)->setCellValue('A1', 'Hasil Penembakan RTS '.$judul2.' PT MIP');
-		$excel->setActiveSheetIndex(0)->setCellValue('A2', 'Tanggal : '.$tgl);
+		$judul2 = $this->session->userdata('temp_kontrol')->site == 'ccp' ? 'CPP 3' : 'View Point';
+		$excel->setActiveSheetIndex(0)->setCellValue('A1', 'Hasil Penembakan RTS ' . $judul2 . ' PT MIP');
+		$excel->setActiveSheetIndex(0)->setCellValue('A2', 'Tanggal : ' . $tgl);
 		$excel->setActiveSheetIndex(0)->mergeCells('A1:S1');
 		$excel->setActiveSheetIndex(0)->mergeCells('A2:S2');
 		$columns = 'A';
 
-		foreach($parameter as $key=>$v){
+		foreach ($parameter as $key => $v) {
 
 			$cl = $columns;
 
-			if(isset($v->temp_tembak->nama_prisma)){
+			if (isset($v->temp_tembak->nama_prisma)) {
 
 				// A & B
 				$sheet->setCellValue(
 					$cl . $row,
-					str_replace('_',' ', $this->safe($v->id_prisma))
+					str_replace('_', ' ', $this->safe($v->id_prisma))
 				);
 				$sheet->setCellValue(
-					'B'. $row,
-					str_replace('_',' ', $this->safe($v->temp_tembak->nama_prisma))
+					'B' . $row,
+					str_replace('_', ' ', $this->safe($v->temp_tembak->nama_prisma))
 				);
 
 				// Style baris A–S
-				foreach(range('A','S') as $columnID) {
-					$sheet->getStyle($columnID. $row)->applyFromArray($style2);
-					$sheet->getStyle($columnID. $row)
+				foreach (range('A', 'S') as $columnID) {
+					$sheet->getStyle($columnID . $row)->applyFromArray($style2);
+					$sheet->getStyle($columnID . $row)
 						->getAlignment()
 						->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
 				}
 
-				$sheet->setCellValue('C'. $row, $this->safe($v->temp_tembak->E0));
-				$sheet->setCellValue('D'. $row, $this->safe($v->temp_tembak->N0));
-				$sheet->setCellValue('E'. $row, $this->safe($v->temp_tembak->Z0));
-				$sheet->setCellValue('F'. $row, $this->safe($v->temp_tembak->HA0));
-				$sheet->setCellValue('G'. $row, $this->safe($v->temp_tembak->VA0));
-				$sheet->setCellValue('H'. $row, $this->safe($v->temp_tembak->SD0));
+				$sheet->setCellValue('C' . $row, $this->safe($v->temp_tembak->E0));
+				$sheet->setCellValue('D' . $row, $this->safe($v->temp_tembak->N0));
+				$sheet->setCellValue('E' . $row, $this->safe($v->temp_tembak->Z0));
+				$sheet->setCellValue('F' . $row, $this->safe($v->temp_tembak->HA0));
+				$sheet->setCellValue('G' . $row, $this->safe($v->temp_tembak->VA0));
+				$sheet->setCellValue('H' . $row, $this->safe($v->temp_tembak->SD0));
 
-				$sheet->setCellValue('I'. $row, $this->safe($v->temp_tembak->E1));
-				$sheet->setCellValue('J'. $row, $this->safe($v->temp_tembak->N1));
-				$sheet->setCellValue('K'. $row, $this->safe($v->temp_tembak->Z1));
-				$sheet->setCellValue('L'. $row, $this->safe($v->temp_tembak->HA1));
-				$sheet->setCellValue('M'. $row, $this->safe($v->temp_tembak->VA1));
-				$sheet->setCellValue('N'. $row, $this->safe($v->temp_tembak->SD1));
+				$sheet->setCellValue('I' . $row, $this->safe($v->temp_tembak->E1));
+				$sheet->setCellValue('J' . $row, $this->safe($v->temp_tembak->N1));
+				$sheet->setCellValue('K' . $row, $this->safe($v->temp_tembak->Z1));
+				$sheet->setCellValue('L' . $row, $this->safe($v->temp_tembak->HA1));
+				$sheet->setCellValue('M' . $row, $this->safe($v->temp_tembak->VA1));
+				$sheet->setCellValue('N' . $row, $this->safe($v->temp_tembak->SD1));
 
-				$sheet->setCellValue('O'. $row, $this->safe($v->temp_tembak->DE));
-				$sheet->setCellValue('P'. $row, $this->safe($v->temp_tembak->DN));
-				$sheet->setCellValue('Q'. $row, $this->safe($v->temp_tembak->DZ));
+				$sheet->setCellValue('O' . $row, $this->safe($v->temp_tembak->DE));
+				$sheet->setCellValue('P' . $row, $this->safe($v->temp_tembak->DN));
+				$sheet->setCellValue('Q' . $row, $this->safe($v->temp_tembak->DZ));
 
-				$sheet->setCellValue('R'. $row, $this->safe($v->temp_tembak->linear));
-				$sheet->setCellValue('S'. $row, $this->safe($v->temp_tembak->arah_pergeseran));
+				$sheet->setCellValue('R' . $row, $this->safe($v->temp_tembak->linear));
+				$sheet->setCellValue('S' . $row, $this->safe($v->temp_tembak->arah_pergeseran));
 			}
 
 			$row++;
@@ -455,7 +498,7 @@ class Beranda extends CI_Controller {
 		header('Content-Description: File Transfer');
 		header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
-		header('Content-Disposition: attachment; filename="Hasil Penembakan RTS '.$judul2.' PT MIP '.$tgl.'.xlsx"');
+		header('Content-Disposition: attachment; filename="Hasil Penembakan RTS ' . $judul2 . ' PT MIP ' . $tgl . '.xlsx"');
 		header('Content-Transfer-Encoding: binary');
 		header('Expires: 0');
 		header('Cache-Control: must-revalidate');
@@ -468,18 +511,19 @@ class Beranda extends CI_Controller {
 		exit;
 	}
 
-	function arah8ID($DE, $DN) {
+	function arah8ID($DE, $DN)
+	{
 		$deg = rad2deg(atan2($DE, $DN));
 		$deg = ($deg + 360) % 360;
 		$dirs = [
-			"Utara",       
-			"Timur Laut",  
-			"Timur",       
-			"Tenggara",    
-			"Selatan",     
-			"Barat Daya",  
-			"Barat",       
-			"Barat Laut"   
+			"Utara",
+			"Timur Laut",
+			"Timur",
+			"Tenggara",
+			"Selatan",
+			"Barat Daya",
+			"Barat",
+			"Barat Laut"
 		];
 		$index = intval(($deg + 22.5) / 45) % 8;
 		return [
@@ -488,60 +532,72 @@ class Beranda extends CI_Controller {
 		];
 	}
 
-	public function index () {
-		if($this->session->userdata('logged_in'))
-		{
-			$kategori=array();
-			if(!$this->session->userdata('temp_kontrol')){
-				$temp_kontrol = $this->db->order_by('datetime','desc')->limit(1)->get('log_kontrol')->row();
-				$this->session->set_userdata('temp_kontrol',$temp_kontrol);
-
+	public function index()
+	{
+		if ($this->session->userdata('logged_in')) {
+			if (!$this->session->userdata('temp_kontrol')) {
+				$temp_kontrol = $this->db->order_by('datetime', 'desc')->limit(1)->get('log_kontrol')->row();
+				$this->session->set_userdata('temp_kontrol', $temp_kontrol);
 			}
 			$this->load->library('googlemaps');
-			$id_kategori = $this->session->userdata('id_kategori');
-			$ktg = $this->db->where('view','1')->order_by('id_katlogger','desc')->get('kategori_logger')->result_array();
+			$ktg = $this->db->where('view', '1')->order_by('id_katlogger', 'desc')->get('kategori_logger')->result_array();
 
-			$data['ktg_all'] = $this->db->where('view','1')->get('kategori_logger')->result_array();
-			$log_data = $this->db->order_by('datetime','desc')->get('log_kontrol')->result_array();
+			$data['ktg_all'] = $this->db->where('view', '1')->get('kategori_logger')->result_array();
+			$log_data = $this->db->order_by('datetime', 'desc')->get('log_kontrol')->result_array();
 			$data['log_data'] = $log_data;
-			if($this->session->userdata('temp_kontrol')){
+			if ($this->session->userdata('temp_kontrol')) {
 				$idlog = $this->session->userdata('temp_kontrol')->id_log;
-			}else{
+			} else {
 				$idlog = '';
 			}
 			$site = $this->session->userdata('temp_kontrol')->site;
+			$selected_datetime = $this->session->userdata('temp_kontrol')->datetime ?? date('Y-m-d H:i:s');
+			$selected_date = date('Y-m-d', strtotime($selected_datetime));
+			$day_start = $selected_date . ' 00:00:00';
+			$day_end = $selected_date . ' 23:59:59';
 			$marker = [];
 
-			$log_first = $this->db->where('site',$site)->where('r0','1')->get('log_kontrol')->row()->id_log;
-			foreach ($ktg  as $key=>$kat) {
-				$tabel=$kat['temp_data'];
-				$data_logger = $this->db->join('t_lokasi', 't_logger.lokasi_logger = t_lokasi.idlokasi')->where('kategori_log',$kat['id_katlogger'])->order_by('id_logger')->get('t_logger')->result_array();
+			$log_first = $this->db->where('site', $site)->where('r0', '1')->get('log_kontrol')->row()->id_log;
+			foreach ($ktg  as $key => $kat) {
+				$tabel = $kat['temp_data'];
+				$data_logger = $this->db->join('t_lokasi', 't_logger.lokasi_logger = t_lokasi.idlokasi')->where('kategori_log', $kat['id_katlogger'])->order_by('id_logger')->get('t_logger')->result_array();
 
-				foreach ($data_logger as $k=>$log){
-					$id_logger=$log['id_logger'];
-					$temp_data = $this->db->where('code_logger',$id_logger)->get($tabel)->row();
-					if($tabel == 'temp_rts'){
-						$temp_prisma = $this->db->join('temp_prisma','temp_prisma.id_prisma = t_prisma.id_prisma')->where('id_logger',$id_logger)->get('t_prisma')->result_array();
-						foreach($temp_prisma as $ke=>$vl){
-							$cek_tembak = $this->db->where('id_kontrol',$idlog)->where('sensor1',$vl['id_prisma'])->get('rts')->row();
-							$first_data = $this->db->where('id_kontrol',$log_first)->where('sensor1',$vl['id_prisma'])->order_by('waktu','asc')->get('rts')->row();
-							if($cek_tembak){
+				foreach ($data_logger as $k => $log) {
+					$id_logger = $log['id_logger'];
+					$temp_data = $this->db->where('code_logger', $id_logger)->get($tabel)->row();
+					if ($tabel == 'temp_rts') {
+						$temp_prisma = $this->db->join('temp_prisma', 'temp_prisma.id_prisma = t_prisma.id_prisma')->where('id_logger', $id_logger)->get('t_prisma')->result_array();
+						foreach ($temp_prisma as $ke => $vl) {
+							$cek_tembak = $this->db
+								->where('id_kontrol', $idlog)
+								->where('code_logger', $id_logger)
+								->where('sensor1', $vl['id_prisma'])
+								->get('rts')
+								->row();
+							$first_data = $this->db
+								->where('id_kontrol', $log_first)
+								->where('code_logger', $id_logger)
+								->where('sensor1', $vl['id_prisma'])
+								->order_by('waktu', 'asc')
+								->get('rts')
+								->row();
+							if ($cek_tembak) {
 								$N1 = $cek_tembak->sensor8;
 								$E1 = $cek_tembak->sensor9;
 								$Z1 = $cek_tembak->sensor10;
-								if($site == 'ccp'){
+								if ($site == 'ccp') {
 									list($newE, $newN) = $this->rotateEN($E1, $N1, 114);
 									$N1 = $newN;
 									$E1 = $newE;
 								}
 								$nama_prisma = $cek_tembak->sensor3;
 
-								if($first_data){
+								if ($first_data) {
 
 									$N0 = $first_data->sensor8;
 									$E0 = $first_data->sensor9;
 									$Z0 = $first_data->sensor10;
-									if($site == 'ccp'){
+									if ($site == 'ccp') {
 										list($newE0, $newN0) = $this->rotateEN($E0, $N0, 114);
 										$N0 = $newN0;
 										$E0 = $newE0;
@@ -549,19 +605,18 @@ class Beranda extends CI_Controller {
 									$HA0 = $first_data->sensor5;
 									$VA0 = $first_data->sensor6;
 									$SD0 = $first_data->sensor7;
-									if($N1 != '000,00,00' and $E1 != '000,00,00' and $Z1 != '000,00,00'){
+									if ($N1 != '000,00,00' and $E1 != '000,00,00' and $Z1 != '000,00,00') {
 										$DN =  $N1 - $N0;
 										$DE = $E1 - $E0;
 										$DZ = $Z1 - $Z0;
 										$linier = sqrt(pow(($E0 - $E1), 2) + pow(($N0 - $N1), 2));
-									}else{
+									} else {
 										$DN =  0;
 										$DE = 0;
 										$DZ = 0;
 										$linier = 0;
 									}
-
-								}else{
+								} else {
 									$N0 = 0;
 									$E0 = 0;
 									$Z0 = 0;
@@ -580,458 +635,279 @@ class Beranda extends CI_Controller {
 								$VA1 = $cek_tembak->sensor6;
 								$SD1 = $cek_tembak->sensor7;
 
-								if($N1 != '000,00,00' and $E1 != '000,00,00' and $Z1 != '000,00,00'){
-									$latlong = json_decode(utm2ll($E1,$N1,50,true))->attr; 
+								if ($N1 != '000,00,00' and $E1 != '000,00,00' and $Z1 != '000,00,00') {
+									$latlong = json_decode(utm2ll($E1, $N1, 50, true))->attr;
 									$deg  = 114;
-									$latlong_first = json_decode(utm2ll($E0,$N0,50,true))->attr; 
+									$latlong_first = json_decode(utm2ll($E0, $N0, 50, true))->attr;
 									$newLat = $latlong_first->lat;
 									$newLng = $latlong_first->lon;
 									$newLat1 = $latlong->lat;
 									$newLng1 = $latlong->lon;
 									$marker[] = [
-										'latitude_new'=>$newLat1,
-										'longitude_new'=>$newLng1,
-										'latitude_conv'=>$newLat,
-										'longitude_conv'=>$newLng,
-										'latitude_r0'=>$latlong_first->lat,
-										'longitude_r0'=>$latlong_first->lon,
-										'deltaX'=> number_format($DN,6,'.',''),
-										'deltaY'=> number_format($DE,6,'.',''),
-										'deltaZ'=> number_format($DZ,6,'.',''),
-										'title'=>$nama_prisma,
-										'icon'=>base_url().'pin_marker/prisma_marker.png',
-										'icon_scaledSize'=> '33,33',
-										'sdis'=>$SD1
+										'latitude_new' => $newLat1,
+										'longitude_new' => $newLng1,
+										'latitude_conv' => $newLat,
+										'longitude_conv' => $newLng,
+										'latitude_r0' => $latlong_first->lat,
+										'longitude_r0' => $latlong_first->lon,
+										'deltaX' => number_format($DN, 6, '.', ''),
+										'deltaY' => number_format($DE, 6, '.', ''),
+										'deltaZ' => number_format($DZ, 6, '.', ''),
+										'title' => $nama_prisma,
+										'icon' => base_url() . 'pin_marker/prisma_marker.png',
+										'icon_scaledSize' => '33,33',
+										'sdis' => $SD1
 									];
-
-								}else{
-									$latlong = 0;  
+								} else {
+									$latlong = 0;
 									$N0 = $first_data->sensor8;
 									$E0 = $first_data->sensor9;
-									$latlong_first = json_decode(utm2ll($E0,$N0,48,false))->attr; 
+									$latlong_first = json_decode(utm2ll($E0, $N0, 48, false))->attr;
 
 									$marker[] = [
-										'latitude_new'=>0,
-										'longitude_new'=>0,
-										'latitude_r0'=>$latlong_first->lat,
-										'longitude_r0'=>$latlong_first->lon,
-										'deltaX'=> number_format($DN,3,'.',''),
-										'deltaY'=> number_format($DE,3,'.',''),
-										'deltaZ'=> number_format($DZ,3,'.',''),
-										'title'=>$nama_prisma,
-										'icon'=>base_url().'pin_marker/prisma_marker.png',
-										'icon_scaledSize'=> '33,33',
-										'sdis'=>$SD1
+										'latitude_new' => 0,
+										'longitude_new' => 0,
+										'latitude_r0' => $latlong_first->lat,
+										'longitude_r0' => $latlong_first->lon,
+										'deltaX' => number_format($DN, 3, '.', ''),
+										'deltaY' => number_format($DE, 3, '.', ''),
+										'deltaZ' => number_format($DZ, 3, '.', ''),
+										'title' => $nama_prisma,
+										'icon' => base_url() . 'pin_marker/prisma_marker.png',
+										'icon_scaledSize' => '33,33',
+										'sdis' => $SD1
 									];
-
 								}
 								$arah = '-';
-								if($linier > 0){
-									$arah = $this->arah8ID($DE, $DN)['bearing'] . ' ('.$this->arah8ID($DE, $DN)['arah_id'].')';
+								if ($linier > 0) {
+									$arah = $this->arah8ID($DE, $DN)['bearing'] . ' (' . $this->arah8ID($DE, $DN)['arah_id'] . ')';
 								}
 
 								$temp_prisma[$ke]['temp_tembak'] = [
-									'nama_prisma' =>$nama_prisma,
-									'N1'=>$N1,
-									'E1'=>$E1,
-									'Z1'=>$Z1,
-									'HA1'=>$HA1,
-									'VA1'=>$VA1,
-									'SD1'=>$SD1,
-									'N0'=>$N0,
-									'E0'=>$E0,
-									'Z0'=>$Z0,
-									'HA0'=>$HA0,
-									'VA0'=>$VA0,
-									'SD0'=>$SD0,
-									'latlong' =>$latlong,
-									'DN'=> number_format($DN,3,'.',''),
-									'DE'=>number_format($DE,3,'.',''),
-									'DZ'=>number_format($DZ,3,'.',''),
-									'linear'=> $linier,
+									'nama_prisma' => $nama_prisma,
+									'N1' => $N1,
+									'E1' => $E1,
+									'Z1' => $Z1,
+									'HA1' => $HA1,
+									'VA1' => $VA1,
+									'SD1' => $SD1,
+									'N0' => $N0,
+									'E0' => $E0,
+									'Z0' => $Z0,
+									'HA0' => $HA0,
+									'VA0' => $VA0,
+									'SD0' => $SD0,
+									'latlong' => $latlong,
+									'DN' => number_format($DN, 3, '.', ''),
+									'DE' => number_format($DE, 3, '.', ''),
+									'DZ' => number_format($DZ, 3, '.', ''),
+									'linear' => $linier,
 									'arah_pergeseran' => $arah
 								];
-							}else{
+
+								$baseE = $this->nfloat($E0);
+								$baseN = $this->nfloat($N0);
+								$baseZ = $this->nfloat($Z0);
+								$base_ok = !(abs($baseE) < 1e-12 && abs($baseN) < 1e-12 && abs($baseZ) < 1e-12);
+
+								$daily = [
+									'count' => 0,
+									'first_time' => null,
+									'last_time' => null,
+									'pergeseran_mm' => null,
+									'kecepatan_mmd' => null,
+									'status_pergeseran' => null,
+									'status_kecepatan' => null,
+									'series' => []
+								];
+
+								if ($base_ok) {
+									$id_logs = $this->db
+										->select('id_log')
+										->where('site', $site)
+										->where('datetime >=', $day_start)
+										->where('datetime <=', $day_end)
+										->get('log_kontrol')
+										->result_array();
+									$id_logs = array_map(static function ($row) { return $row['id_log']; }, $id_logs);
+
+									$rows = [];
+									if (!empty($id_logs)) {
+										$rows = $this->db
+											->select('waktu,sensor8,sensor9,sensor10')
+											->where('code_logger', $id_logger)
+											->where('sensor1', $vl['id_prisma'])
+											->where_in('id_kontrol', $id_logs)
+											->where('id_kontrol !=', '')
+											->where('waktu >=', $day_start)
+											->where('waktu <=', $day_end)
+											->order_by('waktu', 'asc')
+											->get('rts')
+											->result();
+									}
+
+									$first_lin = null;
+									$last_lin = null;
+									$first_time = null;
+									$last_time = null;
+									$series = [];
+
+									foreach ($rows as $rw) {
+										$e1 = $this->nfloat($rw->sensor9);
+										$n1 = $this->nfloat($rw->sensor8);
+										$z1 = $this->nfloat($rw->sensor10);
+										if (abs($e1) < 1e-12 && abs($n1) < 1e-12 && abs($z1) < 1e-12) {
+											continue;
+										}
+
+										if ($site == 'ccp') {
+											list($e1r, $n1r) = $this->rotateEN($e1, $n1, 114);
+											$e1 = $e1r;
+											$n1 = $n1r;
+										}
+
+										$lin_m = sqrt(pow(($e1 - $baseE), 2) + pow(($n1 - $baseN), 2));
+
+										if ($first_lin === null) {
+											$first_lin = $lin_m;
+											$first_time = $rw->waktu;
+										}
+										$last_lin = $lin_m;
+										$last_time = $rw->waktu;
+										$series[] = [
+											't' => $rw->waktu,
+											'mm' => $lin_m * 1000.0
+										];
+									}
+
+									if ($first_lin !== null && $last_lin !== null) {
+										$daily['count'] = count($rows);
+										$daily['first_time'] = $first_time;
+										$daily['last_time'] = $last_time;
+
+										$pergeseran_mm = $last_lin * 1000.0;
+										$delta_mm = abs($last_lin - $first_lin) * 1000.0;
+
+										$kecepatan_mmd = $delta_mm;
+
+										$daily['pergeseran_mm'] = $pergeseran_mm;
+										$daily['kecepatan_mmd'] = $kecepatan_mmd;
+										$daily['status_pergeseran'] = $this->status_pergeseran($pergeseran_mm);
+										$daily['status_kecepatan'] = $this->status_kecepatan($kecepatan_mmd);
+										$daily['series'] = $series;
+									}
+								}
+
+								$temp_prisma[$ke]['daily'] = $daily;
+							} else {
 								$temp_prisma[$ke]['temp_tembak'] = [];
+								$temp_prisma[$ke]['daily'] = [
+									'count' => 0,
+									'first_time' => null,
+									'last_time' => null,
+									'pergeseran_mm' => null,
+									'kecepatan_mmd' => null,
+									'status_pergeseran' => null,
+									'status_kecepatan' => null,
+									'series' => []
+								];
 							}
 						}
-						$awal=date('Y-m-d H:i', (mktime(date('H') - 1)));
-						if($temp_data->waktu >= $awal)
-						{
-							$color="green";
-							$status_logger="Koneksi Terhubung";
-						}
-						else{
-							$color="dark";
-							$status_logger="Koneksi Terputus";			
+						$awal = date('Y-m-d H:i', (mktime(date('H') - 1)));
+						if ($temp_data->waktu >= $awal) {
+							$color = "green";
+							$status_logger = "Koneksi Terhubung";
+						} else {
+							$color = "dark";
+							$status_logger = "Koneksi Terputus";
 						}
 
-						if($temp_data->sensor17 == '1' )
-						{
-							$sdcard='OK';
+						if ($temp_data->sensor17 == '1') {
+							$sdcard = 'OK';
+						} else {
+							$sdcard = 'Bermasalah';
 						}
-						else{
-							$sdcard='Bermasalah';
-						}
-						if($temp_data->sensor14 =='1' and $temp_data->waktu >= $awal){
-							if($temp_data->sensor16 =='1'){
+						if ($temp_data->sensor14 == '1' and $temp_data->waktu >= $awal) {
+							if ($temp_data->sensor16 == '1') {
 								$status_rts = "Connected - Running";
-							}else{
+							} else {
 								$status_rts = "Connected - Standby";
 							}
-						} else{ 
+						} else {
 							$status_rts = "Disconnected";
-						} 
+						}
 						$data_dashboard = [
-							'status'=>$status_rts,
-							'power_rts'=>$temp_data->sensor23,
-							'baterai'=>$temp_data->sensor21,
-							'humidity'=>$temp_data->sensor20,
-							'temperature'=>$temp_data->sensor22,
+							'status' => $status_rts,
+							'power_rts' => $temp_data->sensor23,
+							'baterai' => $temp_data->sensor21,
+							'humidity' => $temp_data->sensor20,
+							'temperature' => $temp_data->sensor22,
 						];
 						$ktg[$key]['logger'][$k] = [
-							'id_logger'=>$id_logger,
-							'nama_lokasi'=>$log['nama_lokasi'],
-							'waktu'=>$temp_data->waktu,
-							'color'=>$color,
-							'status_logger'=>$status_logger,
-							'status_sd'=>$sdcard,
-							'temp_prisma'=>$temp_prisma,
+							'id_logger' => $id_logger,
+							'nama_lokasi' => $log['nama_lokasi'],
+							'waktu' => $temp_data->waktu,
+							'color' => $color,
+							'status_logger' => $status_logger,
+							'status_sd' => $sdcard,
+							'temp_prisma' => $temp_prisma,
 							'data_dashboard' => $data_dashboard
 						];
-						$this->session->set_userdata('temp_prisma',$temp_prisma);
-					}else{
-						$data_logger = $this->db->join('t_informasi','t_informasi.logger_id = t_logger.id_logger')->join('t_lokasi', 't_logger.lokasi_logger = t_lokasi.idlokasi')->where('kategori_log',$kat['id_katlogger'])->get('t_logger')->result_array();
+						$this->session->set_userdata('temp_prisma', $temp_prisma);
+					} else {
+						$data_logger = $this->db->join('t_informasi', 't_informasi.logger_id = t_logger.id_logger')->join('t_lokasi', 't_logger.lokasi_logger = t_lokasi.idlokasi')->where('kategori_log', $kat['id_katlogger'])->get('t_logger')->result_array();
 
-						foreach ($data_logger as $k=>$log){
+						foreach ($data_logger as $k => $log) {
 
-							$id_logger=$log['id_logger'];
-							$temp_data = $this->db->where('code_logger',$id_logger)->get($tabel)->row();
+							$id_logger = $log['id_logger'];
+							$temp_data = $this->db->where('code_logger', $id_logger)->get($tabel)->row();
 
-							$awal=date('Y-m-d H:i',(mktime(date('H')-1)));
-							if($temp_data->waktu >= $awal)
-							{
-								$color="green";
-								$status_logger="Koneksi Terhubung";
-							}
-							else{
-								$color="dark";
-								$status_logger="Koneksi Terputus";			
+							$awal = date('Y-m-d H:i', (mktime(date('H') - 1)));
+							if ($temp_data->waktu >= $awal) {
+								$color = "green";
+								$status_logger = "Koneksi Terhubung";
+							} else {
+								$color = "dark";
+								$status_logger = "Koneksi Terputus";
 							}
 
-							if($temp_data->sensor13 == '1' )
-							{
-								$sdcard='OK';
+							if ($temp_data->sensor13 == '1') {
+								$sdcard = 'OK';
+							} else {
+								$sdcard = 'Bermasalah';
 							}
-							else{
-								$sdcard='Bermasalah';
-							}		
-							$param = $this->db->where('logger_id',$id_logger)->get('parameter_sensor')->result_array();
+							$param = $this->db->where('logger_id', $id_logger)->get('parameter_sensor')->result_array();
 
 
-							foreach($param as $ky => $val) {
-								$get='tabel='.$kat['tabel'].'&id_param='.$val['id_param'];
+							foreach ($param as $ky => $val) {
+								$get = 'tabel=' . $kat['tabel'] . '&id_param=' . $val['id_param'];
 								$kolom = $val['kolom_sensor'];
 
 								$param[$ky]['nilai'] = $temp_data->$kolom;
 
-								$param[$ky]['link'] = 'masterdata/set_sensordash?'.$get;
+								$param[$ky]['link'] = 'masterdata/set_sensordash?' . $get;
 							}
 							$ktg[$key]['logger'][$k] = [
-								'id_logger'=>$id_logger,
-								'nama_lokasi'=>$log['nama_lokasi'],
-								'waktu'=>$temp_data->waktu,
-								'color'=>$color,
-								'status_logger'=>$status_logger,
-								'status_sd'=>$sdcard,
-								'param'=>$param
+								'id_logger' => $id_logger,
+								'nama_lokasi' => $log['nama_lokasi'],
+								'waktu' => $temp_data->waktu,
+								'color' => $color,
+								'status_logger' => $status_logger,
+								'status_sd' => $sdcard,
+								'param' => $param
 							];
 						}
 					}
 				}
-
 			}
 			$data['marker'] = $marker;
-			$data['data_konten']=$ktg;
+			$data['data_konten'] = $ktg;
 
-			$data['konten']='konten/back/v_demo';
-			$this->load->view('template_admin/site',$data);
-		}else{
+			$data['konten'] = 'konten/back/v_demo';
+			$this->load->view('template_admin/site', $data);
+		} else {
 			redirect('login');
 		}
 	}
-	
-	
-	public function index2 () {
-		if($this->session->userdata('logged_in'))
-		{
-			$kategori=array();
-			if(!$this->session->userdata('temp_kontrol')){
-				$temp_kontrol = $this->db->order_by('datetime','desc')->limit(1)->get('log_kontrol')->row();
-				$this->session->set_userdata('temp_kontrol',$temp_kontrol);
 
-			}
-			$this->load->library('googlemaps');
-			$id_kategori = $this->session->userdata('id_kategori');
-			$ktg = $this->db->where('view','1')->order_by('id_katlogger','desc')->get('kategori_logger')->result_array();
-
-			$data['ktg_all'] = $this->db->where('view','1')->get('kategori_logger')->result_array();
-			$log_data = $this->db->order_by('datetime','desc')->get('log_kontrol')->result_array();
-			$data['log_data'] = $log_data;
-			if($this->session->userdata('temp_kontrol')){
-				$idlog = $this->session->userdata('temp_kontrol')->id_log;
-			}else{
-				$idlog = '';
-			}
-			$site = $this->session->userdata('temp_kontrol')->site;
-			$marker = [];
-
-			$log_first = $this->db->where('site',$site)->where('r0','1')->get('log_kontrol')->row()->id_log;
-			foreach ($ktg  as $key=>$kat) {
-				$tabel=$kat['temp_data'];
-				$data_logger = $this->db->join('t_lokasi', 't_logger.lokasi_logger = t_lokasi.idlokasi')->where('kategori_log',$kat['id_katlogger'])->order_by('id_logger')->get('t_logger')->result_array();
-
-				foreach ($data_logger as $k=>$log){
-					$id_logger=$log['id_logger'];
-					$temp_data = $this->db->where('code_logger',$id_logger)->get($tabel)->row();
-					if($tabel == 'temp_rts'){
-						$temp_prisma = $this->db->join('temp_prisma','temp_prisma.id_prisma = t_prisma.id_prisma')->where('id_logger',$id_logger)->get('t_prisma')->result_array();
-						foreach($temp_prisma as $ke=>$vl){
-							$cek_tembak = $this->db->where('id_kontrol',$idlog)->where('sensor1',$vl['id_prisma'])->get('rts')->row();
-							$first_data = $this->db->where('id_kontrol',$log_first)->where('sensor1',$vl['id_prisma'])->order_by('waktu','asc')->get('rts')->row();
-							if($cek_tembak){
-								$N1 = $cek_tembak->sensor8;
-								$E1 = $cek_tembak->sensor9;
-								$Z1 = $cek_tembak->sensor10;
-								if($site == 'ccp'){
-									list($newE, $newN) = $this->rotateEN($E1, $N1, 114);
-									$N1 = $newN;
-									$E1 = $newE;
-								}
-								$nama_prisma = $cek_tembak->sensor3;
-
-								if($first_data){
-
-									$N0 = $first_data->sensor8;
-									$E0 = $first_data->sensor9;
-									$Z0 = $first_data->sensor10;
-									if($site == 'ccp'){
-										list($newE0, $newN0) = $this->rotateEN($E0, $N0, 114);
-										$N0 = $newN0;
-										$E0 = $newE0;
-									}
-									$HA0 = $first_data->sensor5;
-									$VA0 = $first_data->sensor6;
-									$SD0 = $first_data->sensor7;
-									if($N1 != '000,00,00' and $E1 != '000,00,00' and $Z1 != '000,00,00'){
-										$DN =  $N1 - $N0;
-										$DE = $E1 - $E0;
-										$DZ = $Z1 - $Z0;
-										$linier = sqrt(pow(($E0 - $E1), 2) + pow(($N0 - $N1), 2));
-									}else{
-										$DN =  0;
-										$DE = 0;
-										$DZ = 0;
-										$linier = 0;
-									}
-
-								}else{
-									$N0 = 0;
-									$E0 = 0;
-									$Z0 = 0;
-
-									$HA0 = '000,00,00';
-									$VA0 = '000,00,00';
-									$SD0 = '000,00,00';
-
-									$DN = 0;
-									$DE = 0;
-									$DZ = 0;
-									$linier = 0;
-								}
-
-								$HA1 = $cek_tembak->sensor5;
-								$VA1 = $cek_tembak->sensor6;
-								$SD1 = $cek_tembak->sensor7;
-
-								if($N1 != '000,00,00' and $E1 != '000,00,00' and $Z1 != '000,00,00'){
-									$latlong = json_decode(utm2ll($E1,$N1,50,true))->attr; 
-									$deg  = 114;
-									$latlong_first = json_decode(utm2ll($E0,$N0,50,true))->attr; 
-									$newLat = $latlong_first->lat;
-									$newLng = $latlong_first->lon;
-									$newLat1 = $latlong->lat;
-									$newLng1 = $latlong->lon;
-									$marker[] = [
-										'latitude_new'=>$newLat1,
-										'longitude_new'=>$newLng1,
-										'latitude_conv'=>$newLat,
-										'longitude_conv'=>$newLng,
-										'latitude_r0'=>$latlong_first->lat,
-										'longitude_r0'=>$latlong_first->lon,
-										'deltaX'=> number_format($DN,6,'.',''),
-										'deltaY'=> number_format($DE,6,'.',''),
-										'deltaZ'=> number_format($DZ,6,'.',''),
-										'title'=>$nama_prisma,
-										'icon'=>base_url().'pin_marker/prisma_marker.png',
-										'icon_scaledSize'=> '33,33',
-										'sdis'=>$SD1
-									];
-
-								}else{
-									$latlong = 0;  
-									$N0 = $first_data->sensor8;
-									$E0 = $first_data->sensor9;
-									$latlong_first = json_decode(utm2ll($E0,$N0,48,false))->attr; 
-
-									$marker[] = [
-										'latitude_new'=>0,
-										'longitude_new'=>0,
-										'latitude_r0'=>$latlong_first->lat,
-										'longitude_r0'=>$latlong_first->lon,
-										'deltaX'=> number_format($DN,3,'.',''),
-										'deltaY'=> number_format($DE,3,'.',''),
-										'deltaZ'=> number_format($DZ,3,'.',''),
-										'title'=>$nama_prisma,
-										'icon'=>base_url().'pin_marker/prisma_marker.png',
-										'icon_scaledSize'=> '33,33',
-										'sdis'=>$SD1
-									];
-
-								}
-								$arah = '-';
-								if($linier > 0){
-									$arah = $this->arah8ID($DE, $DN)['bearing'] . ' ('.$this->arah8ID($DE, $DN)['arah_id'].')';
-								}
-
-								$temp_prisma[$ke]['temp_tembak'] = [
-									'nama_prisma' =>$nama_prisma,
-									'N1'=>$N1,
-									'E1'=>$E1,
-									'Z1'=>$Z1,
-									'HA1'=>$HA1,
-									'VA1'=>$VA1,
-									'SD1'=>$SD1,
-									'N0'=>$N0,
-									'E0'=>$E0,
-									'Z0'=>$Z0,
-									'HA0'=>$HA0,
-									'VA0'=>$VA0,
-									'SD0'=>$SD0,
-									'latlong' =>$latlong,
-									'DN'=> number_format($DN,3,'.',''),
-									'DE'=>number_format($DE,3,'.',''),
-									'DZ'=>number_format($DZ,3,'.',''),
-									'linear'=> $linier,
-									'arah_pergeseran' => $arah
-								];
-							}else{
-								$temp_prisma[$ke]['temp_tembak'] = [];
-							}
-						}
-						$awal=date('Y-m-d H:i', (mktime(date('H') - 1)));
-						if($temp_data->waktu >= $awal)
-						{
-							$color="green";
-							$status_logger="Koneksi Terhubung";
-						}
-						else{
-							$color="dark";
-							$status_logger="Koneksi Terputus";			
-						}
-
-						if($temp_data->sensor17 == '1' )
-						{
-							$sdcard='OK';
-						}
-						else{
-							$sdcard='Bermasalah';
-						}
-						if($temp_data->sensor14 =='1' and $temp_data->waktu >= $awal){
-							if($temp_data->sensor16 =='1'){
-								$status_rts = "Connected - Running";
-							}else{
-								$status_rts = "Connected - Standby";
-							}
-						} else{ 
-							$status_rts = "Disconnected";
-						} 
-						$data_dashboard = [
-							'status'=>$status_rts,
-							'power_rts'=>$temp_data->sensor23,
-							'baterai'=>$temp_data->sensor21,
-							'humidity'=>$temp_data->sensor20,
-							'temperature'=>$temp_data->sensor22,
-						];
-						$ktg[$key]['logger'][$k] = [
-							'id_logger'=>$id_logger,
-							'nama_lokasi'=>$log['nama_lokasi'],
-							'waktu'=>$temp_data->waktu,
-							'color'=>$color,
-							'status_logger'=>$status_logger,
-							'status_sd'=>$sdcard,
-							'temp_prisma'=>$temp_prisma,
-							'data_dashboard' => $data_dashboard
-						];
-						$this->session->set_userdata('temp_prisma',$temp_prisma);
-					}else{
-						$data_logger = $this->db->join('t_informasi','t_informasi.logger_id = t_logger.id_logger')->join('t_lokasi', 't_logger.lokasi_logger = t_lokasi.idlokasi')->where('kategori_log',$kat['id_katlogger'])->get('t_logger')->result_array();
-
-						foreach ($data_logger as $k=>$log){
-
-							$id_logger=$log['id_logger'];
-							$temp_data = $this->db->where('code_logger',$id_logger)->get($tabel)->row();
-
-							$awal=date('Y-m-d H:i',(mktime(date('H')-1)));
-							if($temp_data->waktu >= $awal)
-							{
-								$color="green";
-								$status_logger="Koneksi Terhubung";
-							}
-							else{
-								$color="dark";
-								$status_logger="Koneksi Terputus";			
-							}
-
-							if($temp_data->sensor13 == '1' )
-							{
-								$sdcard='OK';
-							}
-							else{
-								$sdcard='Bermasalah';
-							}		
-							$param = $this->db->where('logger_id',$id_logger)->get('parameter_sensor')->result_array();
-
-
-							foreach($param as $ky => $val) {
-								$get='tabel='.$kat['tabel'].'&id_param='.$val['id_param'];
-								$kolom = $val['kolom_sensor'];
-
-								$param[$ky]['nilai'] = $temp_data->$kolom;
-
-								$param[$ky]['link'] = 'masterdata/set_sensordash?'.$get;
-							}
-							$ktg[$key]['logger'][$k] = [
-								'id_logger'=>$id_logger,
-								'nama_lokasi'=>$log['nama_lokasi'],
-								'waktu'=>$temp_data->waktu,
-								'color'=>$color,
-								'status_logger'=>$status_logger,
-								'status_sd'=>$sdcard,
-								'param'=>$param
-							];
-						}
-					}
-				}
-
-			}
-			$data['marker'] = $marker;
-			$data['data_konten']=$ktg;
-
-			$data['konten']='konten/back/v_beranda';
-			$this->load->view('template_admin/site',$data);
-		}else{
-			redirect('login');
-		}
-	}
-} 
+}
