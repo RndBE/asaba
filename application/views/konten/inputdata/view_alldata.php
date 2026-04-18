@@ -27,10 +27,6 @@
 								<span><?= $this->session->userdata('log_id') .' | ' .$this->session->userdata('tgl_search')?></span>
 							</li>
 							<li class="list-group-item d-flex justify-content-between align-items-center">
-								<span class="fw-bold">GPS</span>
-								<span><?php if($info){ echo $info->gps1 . ', '. $info->gps2; } ?></span>
-							</li>
-							<li class="list-group-item d-flex justify-content-between align-items-center">
 								<span class="fw-bold">Serial Number</span>
 								<span><?= ($info) ? $info->serial_number : ''?></span>
 							</li>
@@ -90,35 +86,6 @@
 					
 					</div> 
 					
-					<div class="col-lg-3 mt-2 mt-md-0"> 
-					
-						<ul class="list-group list-group-item-primary p-0">
-							
-							<li class="list-group-item d-flex justify-content-between align-items-center">
-								<span class="fw-bold">Ambil Data</span>
-								<span><?= ($info) ? $info->ad : '' ?></span>
-							</li>
-							<li class="list-group-item d-flex justify-content-between align-items-center">
-								<span class="fw-bold">Kirim Data</span>
-								<span><?= ($info) ? $info->kd  : '' ?></span>
-							</li>
-							<li class="list-group-item d-flex align-items-center justify-content-between">
-								<span class="fw-bold">Max Reset</span>
-								<span><?= ($info) ? $info->mr : '' ?></span>
-							</li>
-							<li class="list-group-item d-flex justify-content-between align-items-center">
-								<span class="fw-bold">WDT</span>
-								<span><?= ($info) ? $info->wdt : ''?></span>
-							</li>
-						</ul>
-						<!--
-						<?php echo form_open('datamasuk');?>
-						
-							<button class="btn btn-primary" name="btnrefresh" type="submit"><div class="d-flex justify-content-center"><span class="material-symbols-outlined mx-2" >refresh</span> Refresh</div></button>
-
-						
-						<?php echo form_close();?>-->
-					</div> 
 			
 				</div> 
 			</section>
