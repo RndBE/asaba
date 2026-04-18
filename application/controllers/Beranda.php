@@ -32,34 +32,22 @@ class Beranda extends CI_Controller
 		return number_format((float)$v, (int)$d, '.', '');
 	}
 
-	private function status_pergeseran($mm, $site)
+	private function status_pergeseran($mm)
 	{
 		$mm = (float)$mm;
-		if ($site === 'ccp') {
-			if ($mm < 100) return ['label' => 'Normal', 'class' => 'bg-success-lt text-dark'];
-			if ($mm < 200) return ['label' => 'Waspada', 'class' => 'bg-warning-lt text-dark'];
-			if ($mm < 400) return ['label' => 'Siaga', 'class' => 'bg-orange-lt text-dark'];
-			return ['label' => 'Awas', 'class' => 'bg-danger-lt text-white'];
-		}
 		if ($mm < 50) return ['label' => 'Normal', 'class' => 'bg-success-lt text-dark'];
 		if ($mm < 100) return ['label' => 'Waspada', 'class' => 'bg-warning-lt text-dark'];
 		if ($mm < 200) return ['label' => 'Siaga', 'class' => 'bg-orange-lt text-dark'];
 		return ['label' => 'Awas', 'class' => 'bg-danger-lt text-white'];
 	}
 
-	private function status_kecepatan($mm_per_day, $site)
+	private function status_kecepatan($mm_per_day)
 	{
 		$mmd = (float)$mm_per_day;
 		$level_d = 0;
-		if ($site === 'ccp') {
-			if ($mmd > 150) $level_d = 3;
-			else if ($mmd > 100) $level_d = 2;
-			else if ($mmd > 50) $level_d = 1;
-		} else {
-			if ($mmd > 120) $level_d = 3;
-			else if ($mmd > 80) $level_d = 2;
-			else if ($mmd > 40) $level_d = 1;
-		}
+		if ($mmd > 120) $level_d = 3;
+		else if ($mmd > 80) $level_d = 2;
+		else if ($mmd > 40) $level_d = 1;
 		if ($level_d === 0) return ['label' => 'Normal', 'class' => 'bg-success-lt text-dark'];
 		if ($level_d === 1) return ['label' => 'Waspada', 'class' => 'bg-warning-lt text-dark'];
 		if ($level_d === 2) return ['label' => 'Siaga', 'class' => 'bg-orange-lt text-dark'];
@@ -741,9 +729,7 @@ class Beranda extends CI_Controller
 										->where('datetime <=', $day_end)
 										->get('log_kontrol')
 										->result_array();
-									$id_logs = array_map(static function ($row) {
-										return $row['id_log'];
-									}, $id_logs);
+									$id_logs = array_map(static function ($row) { return $row['id_log']; }, $id_logs);
 
 									$rows = [];
 									if (!empty($id_logs)) {
@@ -759,6 +745,7 @@ class Beranda extends CI_Controller
 											->get('rts')
 											->result();
 									}
+
 									$first_lin = null;
 									$last_lin = null;
 									$first_time = null;
@@ -805,8 +792,8 @@ class Beranda extends CI_Controller
 
 										$daily['pergeseran_mm'] = $pergeseran_mm;
 										$daily['kecepatan_mmd'] = $kecepatan_mmd;
-										$daily['status_pergeseran'] = $this->status_pergeseran($pergeseran_mm, $site);
-										$daily['status_kecepatan'] = $this->status_kecepatan($kecepatan_mmd, $site);
+										$daily['status_pergeseran'] = $this->status_pergeseran($pergeseran_mm);
+										$daily['status_kecepatan'] = $this->status_kecepatan($kecepatan_mmd);
 										$daily['series'] = $series;
 									}
 								}
@@ -866,7 +853,6 @@ class Beranda extends CI_Controller
 							'temp_prisma' => $temp_prisma,
 							'data_dashboard' => $data_dashboard
 						];
-
 						$this->session->set_userdata('temp_prisma', $temp_prisma);
 					} else {
 						$data_logger = $this->db->join('t_informasi', 't_informasi.logger_id = t_logger.id_logger')->join('t_lokasi', 't_logger.lokasi_logger = t_lokasi.idlokasi')->where('kategori_log', $kat['id_katlogger'])->get('t_logger')->result_array();
@@ -923,4 +909,5 @@ class Beranda extends CI_Controller
 			redirect('login');
 		}
 	}
+
 }

@@ -86,27 +86,8 @@
 
 <div class="page-body">
 	<div class="container-xl">
-		<div class="card border-0 shadow-sm mb-3">
-			<div class="card-header py-1">
-				<ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs">
-					<li class="nav-item">
-						<a href="#tabs-structural" class="nav-link active fw-bold" data-bs-toggle="tab">
-							<i class="fa-solid fa-layer-group me-2"></i> Structural Health
-						</a>
-					</li>
-					<li class="nav-item">
-						<a href="#tabs-device" class="nav-link fw-bold" data-bs-toggle="tab">
-							<i class="fa-solid fa-server me-2"></i> Device Health & Audit Log
-						</a>
-					</li>
-				</ul>
-			</div>
-			<div class="card-body p-3">
-				<div class="tab-content">
-					<!-- TAB 1: STRUCTURAL HEALTH -->
-					<div class="tab-pane active show" id="tabs-structural">
-						<div class="row gy-3">
-							<div class="col-lg-4 col-xl-4 col-xxl-3">
+		<div class="row gy-3">
+			<div class="col-lg-4 col-xl-4 col-xxl-3">
 				<div class="card">
 					<div class="card-header d-flex justify-content-between">
 						<h3 class="card-title fw-bold">Kontrol ADR</h3>
@@ -153,6 +134,24 @@
 							<input class="form-control w-100 me-3" type="text" id="kode_akses"/ <?= ($status_kontrol->status_manual == '1') ? 'disabled': '' ?>>
 							<button class="btn btn-primary " type="button" id="submit_kontrol" <?= ($status_kontrol->status_manual == '1' or $data_rts['Cek_RTS']['nilai'] =='0') ? 'disabled': '' ?>><i id="load1" class="fa-solid fa-spinner fa-spin me-2 d-none"></i>Mulai Kontrol</button></div>
 						<small class="text-danger d-none" id="kode_salah">*Kode Akses Salah</small>
+					</div>
+				</div>
+				<div class="card mt-3 mt-xl-4 pb-0">
+					<div class="card-header d-flex justify-content-between py-3">
+						<h3 class="card-title fw-bold">Log Kontrol</h3>
+						<!--<a href=""><h4 class="fw-normal mb-0">Lihat Semua</h4></a>-->
+					</div>
+					<div class="card-body p-2 pb-0 pt-2">
+						<?php foreach($log_kontrol as $lg => $lgk) { ?>
+						<div class="d-flex justify-content-between align-items-center  mb-2 px-3 py-2 border rounded">
+							<div>
+								<h4 class="mb-1 fw-normal">Running Date : <?= $lgk['datetime']?></h4>
+
+								Prisma Count : <?= str_replace('P','',$lgk['prisma']) ?>
+							</div>
+							<!--<a href="#" class="h5 fw-normal text-primary mb-0">Lihat Data <i class="fa-solid fa-arrow-right ms-1"></i></a>-->
+						</div>
+						<?php } ?>
 					</div>
 				</div>
 			</div>
@@ -252,59 +251,8 @@
 					</div>
 				</div>
 			</div>
-						</div>
-					</div><!-- End Tab 1 -->
 
-					<!-- TAB 2: DEVICE HEALTH & AUDIT -->
-					<div class="tab-pane" id="tabs-device">
-						<div class="row gy-3">
-							<!-- Bagian Audit Log / Status History Pekerjaan -->
-							<div class="col-lg-12">
-								<div class="card border-0 shadow-sm">
-									<div class="card-header bg-light d-flex justify-content-between py-3">
-										<h3 class="card-title fw-bold"><i class="fa-solid fa-clock-rotate-left text-muted me-2"></i> Audit Trail & Job Logs</h3>
-									</div>
-									<div class="card-body p-0">
-										<div class="table-responsive">
-											<table class="table table-vcenter card-table table-striped">
-												<thead>
-													<tr>
-														<th>Timestamp</th>
-														<th>Event Type</th>
-														<th>Prisma Target Count</th>
-														<th>User Action</th>
-														<th class="text-end">Status</th>
-													</tr>
-												</thead>
-												<tbody>
-													<?php foreach($log_kontrol as $lg => $lgk) { ?>
-													<tr>
-														<td><?= $lgk['datetime'] ?></td>
-														<td>Routine Auto-Target</td>
-														<td><?= str_replace('P','',$lgk['prisma']) ?> Prisms</td>
-														<td>System Automated</td>
-														<td class="text-end">
-															<span class="badge bg-green-lt">Completed</span>
-														</td>
-													</tr>
-													<?php } ?>
-													<?php if(empty($log_kontrol)) { ?>
-													<tr>
-														<td colspan="5" class="text-center text-muted">No audit trails available.</td>
-													</tr>
-													<?php } ?>
-												</tbody>
-											</table>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div><!-- End Tab 2 -->
-
-				</div><!-- End Tab Content -->
-			</div><!-- End Card Body -->
-		</div><!-- End Card Tabs Wrapper -->
+		</div>
 	</div>
 	<div class="modal fade" id="kontrol_jadwal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
 		<div class="modal-dialog modal-dialog-centered">

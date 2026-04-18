@@ -21,7 +21,6 @@
 		width: 220px !important;
 		height: 60px !important;
 	}
-
 	.legend-dot {
 		display: inline-block;
 		width: 10px;
@@ -378,13 +377,7 @@
 																							</td>
 																							<td class="text-center px-0  d-flex flex-column align-items-center" style="min-width:220px">
 																								<?php if ($d && !empty($d['series'])) { ?>
-																									<?php
-																									$site = $this->session->userdata('temp_kontrol')->site ?? 'vp';
-																									$thr = ($site === 'ccp')
-																										? ['n1' => 100, 'n2' => 200, 'n3' => 400]
-																										: ['n1' => 50, 'n2' => 100, 'n3' => 200];
-																									?>
-																									<canvas class="sparkline" height="60" data-thresholds='<?= json_encode($thr, JSON_HEX_APOS | JSON_HEX_QUOT) ?>' data-series='<?= json_encode($d["series"], JSON_HEX_APOS | JSON_HEX_QUOT) ?>'></canvas>
+																									<canvas class="sparkline" height="60" data-series='<?= json_encode($d["series"], JSON_HEX_APOS | JSON_HEX_QUOT) ?>'></canvas>
 																									<div class="d-flex justify-content-center mt-2 gap-2 small text-muted">
 																										<span><span class="legend-dot" style="background:#16a34a"></span> Normal</span>
 																										<span><span class="legend-dot" style="background:#f59e0b"></span> Waspada</span>
@@ -779,13 +772,10 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script>
-	function mmToColor(mm, thr) {
-		const n1 = thr && Number.isFinite(Number(thr.n1)) ? Number(thr.n1) : 50;
-		const n2 = thr && Number.isFinite(Number(thr.n2)) ? Number(thr.n2) : 100;
-		const n3 = thr && Number.isFinite(Number(thr.n3)) ? Number(thr.n3) : 200;
-		if (mm < n1) return "#16a34a";
-		if (mm < n2) return "#f59e0b";
-		if (mm < n3) return "#f97316";
+	function mmToColor(mm) {
+		if (mm < 50) return "#16a34a";
+		if (mm < 100) return "#f59e0b";
+		if (mm < 200) return "#f97316";
 		return "#ef4444";
 	}
 
@@ -802,22 +792,12 @@
 			}
 			if (!series.length) return;
 
-			let thr = null;
-			const thrRaw = canvas.getAttribute('data-thresholds');
-			if (thrRaw) {
-				try {
-					thr = JSON.parse(thrRaw);
-				} catch (e) {
-					thr = null;
-				}
-			}
-
 			canvas.width = 220;
 			canvas.height = 60;
 
 			const labels = series.map(p => p.t);
 			const data = series.map(p => Number(p.mm));
-			const colors = series.map(p => mmToColor(Number(p.mm), thr));
+			const colors = series.map(p => mmToColor(Number(p.mm)));
 
 			new Chart(canvas.getContext('2d'), {
 				type: 'line',
